@@ -29,5 +29,3 @@ async def get_json_object() -> BookInfo:
         "update_date": json_data["update_date"]
     }
     return selected_fields
-
-
