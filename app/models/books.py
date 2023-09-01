@@ -3,7 +3,7 @@ from app.utils.database import engine
 from app.models import Base
 
 class Book(Base):
-    __tablename__ = "books"
+    __tablename__ = "papers"
     
     id = Column(Integer, primary_key=True)
     submitter = Column(String(200))
@@ -19,3 +19,13 @@ class Book(Base):
     versions =  Column(String())
     update_date = Column(String())
     authors_parsed= Column(String())
+    
+    __tablename__ = "authors"
+    
+    id = Column(Integer, primary_key=True)
+    authors = Column(String(200))
+
+    __tablename__ = "categories"
+    
+    id = Column(Integer, primary_key=True)
+    categories = Column(String())

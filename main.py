@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any, Union
 from fastapi.responses import RedirectResponse, HTMLResponse
 #from app.models.task import Book
 
-templates = Jinja2Templates(directory="app/templates")
+'''templates = Jinja2Templates(directory="app/templates")'''
 
 app = FastAPI()
 
@@ -37,22 +37,13 @@ async def get_json_object(request: Request):
             "update_date": paper["update_date"]
         }
         selected_fields_list.append(selected_fields)
-    return templates.TemplateResponse("papers.html", {"request": request, "data": selected_fields_list, "endpoint": "papers"})
+    return selected_fields_list
+    #return templates.TemplateResponse("papers.html", {"request": request, "data": selected_fields_list, "endpoint": "papers"})
 
 
-@app.get("/papers/{id}", response_model=BookInfo, response_class=HTMLResponse)
-async def get_paper_by_id(id: str, request: Request):
-    paper_to_return = None
-    for paper in json_data["foo"]:
-        if paper["id"] == id:
-            paper_to_return = paper
-            break
-    if paper_to_return is None:
-        raise HTTPException(status_code=404, detail="Paper not found")
-    return templates.TemplateResponse("papers.html", {"request": request, "data": paper_to_return, "endpoint": f"papers/{id}"})
 
-@app.get("/authors", response_class=HTMLResponse)
-async def get_authors(request: Request):
+@app.get("/authors", response_model=List[Dict[str, str]])
+async def get_authors():
     authors_list = []
     for name in json_data["foo"]:
         authors = name["authors"]
@@ -64,29 +55,12 @@ async def get_authors(request: Request):
             }
             if author_info not in authors_list:
                 authors_list.append(author_info)
-    
-    return templates.TemplateResponse("papers.html", {"request": request, "data": authors_list, "endpoint": "authors"})
+    return authors_list
+    #return templates.TemplateResponse("papers.html", {"request": request, "data": authors_list, "endpoint": "authors"})
 
 
-@app.get("/authors/{id}", response_model=Dict[str, Union[str, List[str]]])
-async def get_author(id: str, request: Request):
-    for data in json_data["foo"]:
-        if data["id"] == id:
-            author_info = {
-                "id": data["id"],
-                "name": data["authors"],
-                "papers": []
-            }
-            for paper in json_data["foo"]:
-                if paper["authors"] == data["authors"]:
-                    author_info["papers"].append(paper["title"])
-            return templates.TemplateResponse("papers.html", {"request": request, "data": author_info, "endpoint": f"papers/{id}"})
-    return {"message": "Author not found"}
-
-
-
-@app.get("/categories", response_class=HTMLResponse)
-async def get_categories(request: Request):
+@app.get("/categories", response_model=List[Dict[str, str]])
+async def get_categories():
     categories_list = []
     for data in json_data["foo"]:
         categories = data["categories"].split()
@@ -97,22 +71,54 @@ async def get_categories(request: Request):
             }
             if category_info not in categories_list:
                 categories_list.append(category_info)
-    
-    return templates.TemplateResponse("papers.html", {"request": request, "data": categories_list, "endpoint": "categories"})
+    return categories_list
+    #return templates.TemplateResponse("papers.html", {"request": request, "data": categories_list, "endpoint": "categories"})
+
+
+@app.get("/papers/{id}", response_model=BookInfo)
+async def get_paper_by_id(id: str):
+    paper_to_return = None
+    for paper in json_data["foo"]:
+        if paper["id"] == id:
+            paper_to_return = paper
+            break
+    if paper_to_return is None:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    return paper_to_return
+    #return templates.TemplateResponse("papers.html", {"request": request, "data": paper_to_return, "endpoint": f"papers/{id}"})
+
+@app.get("/authors/{id}", response_model=Dict[str, Union[str, List[str]]])
+async def get_author(id: str):
+    for data in json_data["foo"]:
+        if data["id"] == id:
+            author_info = {
+                "id": data["id"],
+                "name": data["authors"],
+                "papers": []
+            }
+            for paper in json_data["foo"]:
+                if paper["authors"] == data["authors"]:
+                    author_info["papers"].append(paper["title"])
+            return author_info
+            #return templates.TemplateResponse("papers.html", {"request": request, "data": author_info, "endpoint": f"authors/{id}"})
+    return {"message": "Author not found"}
+
 
 
 @app.get("/categories/{id}", response_model=Dict[str, Union[str, List[Dict[str, str]]]])
-async def get_category(id: str, request: Request):
-    category_info = {}
+async def get_category(id: str):
     for data in json_data["foo"]:
-        if id == data["id"]:
-            category_info["id"] = data["id"]
-            category_info["name"] = data["categories"]
-            category_info["papers"] = []
+        if data["id"] == id:
+            category_info = {
+                "id": data["id"],
+                "name": data["categories"],
+                "papers": []
+            }
             for paper in json_data["foo"]:
-                if id == paper["id"]:
+                if paper["categories"] == data["categories"]:
                     category_info["papers"].append({
                         "title": paper["title"]
                     })
-            return templates.TemplateResponse("papers.html", {"request": request, "data": category_info, "endpoint": f"papers/{id}"})
+            #return templates.TemplateResponse("papers.html", {"request": request, "data": category_info, "endpoint": f"categories/{id}"})
+            return category_info
     return {"message": "Category not found"}
