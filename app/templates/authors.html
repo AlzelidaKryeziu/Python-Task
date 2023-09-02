@@ -33,17 +33,16 @@
         }
 
         .id {
-            width: 15%;
-            text-align: center;
+            width: 10%;
         }
 
         .name {
-            width: 85%;
+            width: 90%;
         }
 
         table {
-            min-width: 50vw;
             border-collapse: collapse;
+            min-width: 50vw;
         }
 
         thead {
@@ -55,10 +54,34 @@
             border-top: 1px solid black;
             padding: 3px;
         }
+
+        .title {
+            margin: 5px;
+        }
+        
+        input {
+            height: 30px;
+            border: 1px solid gray;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #007BFF;
+            color: white;
+            height: 32px;
+            border: none;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
-    <h1>Authors List</h1>
+    <div class="title">
+        <h1>Authors List</h1>
+        <form method="get" action="/authors">
+            <input type="text" id="search_query" name="search_query" value="{{ search_query }}" placeholder="Enter search query">
+            <button type="submit">Search</button>
+        </form>
+    </div>
     <table>
         <thead>
             <tr>
