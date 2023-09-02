@@ -1,124 +1,109 @@
-import json
-from fastapi import FastAPI, HTTPException, Request, Form, Depends, status
+from fastapi import FastAPI, Request, Depends, Path
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, ValidationError
-from typing import List, Optional, Dict, Any, Union
-from fastapi.responses import RedirectResponse, HTMLResponse
-#from app.models.task import Book
-
-'''templates = Jinja2Templates(directory="app/templates")'''
+from fastapi.responses import HTMLResponse
+import asyncpg
+from asyncpg import Connection
 
 app = FastAPI()
+templates = Jinja2Templates(directory="app/templates")
 
-with open('Book2.json', 'r', encoding='utf-8-sig') as json_file:
-    json_data = json.load(json_file)
-   
+DATABASE_URL = "postgresql://postgres:12345@localhost:5432/pythontask"
 
-class BookInfo(BaseModel):
-    id: str
-    title: str
-    abstract: str
-    authors: str
-    categories: str
-    update_date: str
+async def get_db_conn() -> Connection:
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        yield conn
+    finally:
+        await conn.close()
 
+class PaperModel:
+    def __init__(self, id, submitter, title, comments, journal_ref, doi, report_no, license, abstract, versions, update_date, authors_parsed, categories):
+        self.id = id
+        self.submitter = submitter
+        self.title = title
+        self.comments = comments
+        self.journal_ref = journal_ref
+        self.doi = doi
+        self.report_no = report_no
+        self.license = license
+        self.abstract = (abstract[:80] + '...') if len(abstract) > 80 else abstract
+        self.versions = str(versions).replace('{', '').replace('[', '').replace('"', '').replace('{', '').replace(']', '')
+        self.update_date = update_date
+        self.authors_parsed = str(authors_parsed).replace('{', '').replace('[', '').replace('"', '').replace('{', '').replace(']', '').replace(' , ', '')
 
-# Endpoints
-@app.get("/papers", response_model=List[BookInfo])
-async def get_json_object(request: Request):
-    selected_fields_list = []
-    for paper in json_data["foo"]:
-        selected_fields = {
-            "id": paper["id"],
-            "title": paper["title"],
-            "abstract": paper["abstract"],
-            "authors": paper["authors"],
-            "categories": paper["categories"],
-            "update_date": paper["update_date"]
-        }
-        selected_fields_list.append(selected_fields)
-    return selected_fields_list
-    #return templates.TemplateResponse("papers.html", {"request": request, "data": selected_fields_list, "endpoint": "papers"})
+        # Check if categories is string or  list
+        if isinstance(categories, str):
+            self.categories = categories
+        else:
+            self.categories = ', '.join([category.name for category in categories])
 
+class FullPaperModel:
+    def __init__(self, id, submitter, title, comments, journal_ref, doi, report_no, license, abstract, versions, update_date, authors_parsed, categories):
+        self.id = id
+        self.submitter = submitter
+        self.title = title
+        self.comments = comments
+        self.journal_ref = journal_ref
+        self.doi = doi
+        self.report_no = report_no
+        self.license = license
+        self.abstract = abstract
+        self.versions = str(versions).replace('{', '').replace('[', '').replace('"', '').replace('{', '').replace(']', '')
+        self.update_date = update_date
+        self.authors_parsed = str(authors_parsed).replace('{', '').replace('[', '').replace('"', '').replace('{', '').replace(']', '').replace(' , ', '')
 
+        # Check if categories is a string or list
+        if isinstance(categories, str):
+            self.categories = categories
+        else:
+            self.categories = ', '.join([category.name for category in categories])
 
-@app.get("/authors", response_model=List[Dict[str, str]])
-async def get_authors():
-    authors_list = []
-    for name in json_data["foo"]:
-        authors = name["authors"]
-        author_list = [author.strip() for author in authors.split(',')]
-        for author in author_list:
-            author_info = {
-                "id": name["id"],
-                "name": author
-            }
-            if author_info not in authors_list:
-                authors_list.append(author_info)
-    return authors_list
-    #return templates.TemplateResponse("papers.html", {"request": request, "data": authors_list, "endpoint": "authors"})
+@app.get("/papers", response_class=HTMLResponse)
+async def get_papers(request: Request, conn: Connection = Depends(get_db_conn)):
+    try:
+        query = """
+            SELECT *,
+                (
+                    SELECT string_agg(categories.name, ', ' ORDER BY categories.name)
+                    FROM categories_papers
+                    JOIN categories ON categories_papers.category_id = categories.id
+                    WHERE categories_papers.paper_id = papers.id
+                ) AS categories
+            FROM papers
+        """
 
+        
+        result = await conn.fetch(query)
 
-@app.get("/categories", response_model=List[Dict[str, str]])
-async def get_categories():
-    categories_list = []
-    for data in json_data["foo"]:
-        categories = data["categories"].split()
-        for category in categories:
-            category_info = {
-                "id": data["id"],
-                "name": category
-            }
-            if category_info not in categories_list:
-                categories_list.append(category_info)
-    return categories_list
-    #return templates.TemplateResponse("papers.html", {"request": request, "data": categories_list, "endpoint": "categories"})
+        papers = [PaperModel(**record) for record in result]
 
+        return templates.TemplateResponse("papers.html", {"request": request, "papers": papers})
+    except Exception as e:
+        error_message = f"An error occurred: {str(e)}"
+        return HTMLResponse(content=error_message, status_code=500)
 
-@app.get("/papers/{id}", response_model=BookInfo)
-async def get_paper_by_id(id: str):
-    paper_to_return = None
-    for paper in json_data["foo"]:
-        if paper["id"] == id:
-            paper_to_return = paper
-            break
-    if paper_to_return is None:
-        raise HTTPException(status_code=404, detail="Paper not found")
-    return paper_to_return
-    #return templates.TemplateResponse("papers.html", {"request": request, "data": paper_to_return, "endpoint": f"papers/{id}"})
+@app.get("/papers/{id}", response_class=HTMLResponse)
+async def get_paper_by_id(request: Request, id: str = Path(...), conn: Connection = Depends(get_db_conn)):
+    try:
+        query = """
+            SELECT *,
+                (
+                    SELECT string_agg(categories.name, ', ' ORDER BY categories.name)
+                    FROM categories_papers
+                    JOIN categories ON categories_papers.category_id = categories.id
+                    WHERE categories_papers.paper_id = papers.id
+                ) AS categories
+            FROM papers
+            WHERE id = $1
+        """
+        result = await conn.fetchrow(query, id)
 
-@app.get("/authors/{id}", response_model=Dict[str, Union[str, List[str]]])
-async def get_author(id: str):
-    for data in json_data["foo"]:
-        if data["id"] == id:
-            author_info = {
-                "id": data["id"],
-                "name": data["authors"],
-                "papers": []
-            }
-            for paper in json_data["foo"]:
-                if paper["authors"] == data["authors"]:
-                    author_info["papers"].append(paper["title"])
-            return author_info
-            #return templates.TemplateResponse("papers.html", {"request": request, "data": author_info, "endpoint": f"authors/{id}"})
-    return {"message": "Author not found"}
+        if result is None:
+            return HTMLResponse(content="Paper not found", status_code=404)
 
+        paper = FullPaperModel(**result)
 
-
-@app.get("/categories/{id}", response_model=Dict[str, Union[str, List[Dict[str, str]]]])
-async def get_category(id: str):
-    for data in json_data["foo"]:
-        if data["id"] == id:
-            category_info = {
-                "id": data["id"],
-                "name": data["categories"],
-                "papers": []
-            }
-            for paper in json_data["foo"]:
-                if paper["categories"] == data["categories"]:
-                    category_info["papers"].append({
-                        "title": paper["title"]
-                    })
-            #return templates.TemplateResponse("papers.html", {"request": request, "data": category_info, "endpoint": f"categories/{id}"})
-            return category_info
-    return {"message": "Category not found"}
+        return templates.TemplateResponse("paper_id.html", {"request": request, "paper": paper})
+    except Exception as e:
+        error_message = f"An error occurred: {str(e)}"
+        return HTMLResponse(content=error_message, status_code=500)
