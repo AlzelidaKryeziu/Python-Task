@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Request, Depends, Path
+from fastapi import FastAPI, Request, Depends, Path, Query
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 import asyncpg
 from asyncpg import Connection
+from sqlalchemy import func
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
@@ -26,7 +27,7 @@ class PaperModel:
         self.doi = doi
         self.report_no = report_no
         self.license = license
-        self.abstract = (abstract[:80] + '...') if len(abstract) > 80 else abstract
+        self.abstract = (abstract[:60] + '...') if len(abstract) > 60 else abstract
         self.versions = str(versions).replace('{', '').replace('[', '').replace('"', '').replace('{', '').replace(']', '')
         self.update_date = update_date
         self.authors_parsed = str(authors_parsed).replace('{', '').replace('[', '').replace('"', '').replace('{', '').replace(']', '').replace(' , ', '')
@@ -76,30 +77,52 @@ class CategoryModel:
         self.id = id
         self.name = name
 
-
 @app.get("/papers", response_class=HTMLResponse)
-async def get_papers(request: Request, conn: Connection = Depends(get_db_conn)):
+async def get_papers(request: Request, page: int = Query(1, description="Page number", gt=0),
+                     items_per_page: int = Query(10, description="Items per page", le=50),
+                     conn: Connection = Depends(get_db_conn)):
     try:
-        query = """
-            SELECT *,
-                (
-                    SELECT string_agg(categories.name, ', ' ORDER BY categories.name)
-                    FROM categories_papers
-                    JOIN categories ON categories_papers.category_id = categories.id
-                    WHERE categories_papers.paper_id = papers.id
-                ) AS categories
-            FROM papers
-        """
+        # Calculate offset based on page and items_per_page
+        offset = (page - 1) * items_per_page
 
-        
+        # Fetch papers with pagination
+        query = f'''
+            SELECT *,
+            (
+                SELECT string_agg(categories.name, ', ' ORDER BY categories.name)
+                FROM categories_papers
+                JOIN categories ON categories_papers.category_id = categories.id
+                WHERE categories_papers.paper_id = papers.id
+            ) AS categories
+            FROM papers
+            LIMIT {items_per_page}
+            OFFSET {offset}
+        '''
         result = await conn.fetch(query)
 
         papers = [PaperModel(**record) for record in result]
 
-        return templates.TemplateResponse("papers.html", {"request": request, "papers": papers})
+        # Calculate the total number of papers (you might need a separate query)
+        total_papers_query = "SELECT COUNT(*) FROM papers"
+        total_papers = await conn.fetchval(total_papers_query)
+
+        # Calculate total pages
+        total_pages = (total_papers + items_per_page - 1) // items_per_page
+
+        return templates.TemplateResponse(
+            "papers.html",
+            {
+                "request": request,
+                "papers": papers,
+                "page": page,
+                "total_pages": total_pages,  # Pass total_pages to the template
+                "items_per_page": items_per_page,
+            },
+        )
     except Exception as e:
         error_message = f"An error occurred: {str(e)}"
         return HTMLResponse(content=error_message, status_code=500)
+
 
 @app.get("/papers/{id}", response_class=HTMLResponse)
 async def get_paper_by_id(request: Request, id: str = Path(...), conn: Connection = Depends(get_db_conn)):
@@ -128,17 +151,48 @@ async def get_paper_by_id(request: Request, id: str = Path(...), conn: Connectio
         return HTMLResponse(content=error_message, status_code=500)
 
 @app.get("/authors", response_class=HTMLResponse)
-async def get_authors(request: Request, conn: Connection = Depends(get_db_conn)):
+async def get_authors(
+    request: Request,
+    page: int = Query(1, description="Page number", gt=0),
+    items_per_page: int = Query(10, description="Items per page", le=50),
+    conn: Connection = Depends(get_db_conn)
+):
     try:
-        query = "SELECT id, name FROM authors"
+        # Calculate offset based on page and items_per_page
+        offset = (page - 1) * items_per_page
+
+        # Fetch authors with pagination
+        query = f"SELECT id, name FROM authors LIMIT {items_per_page} OFFSET {offset}"
         result = await conn.fetch(query)
 
         authors = [AuthorModel(**record) for record in result]
 
-        return templates.TemplateResponse("authors.html", {"request": request, "authors": authors})
+        # Calculate the total number of authors
+        total_authors_query = "SELECT COUNT(*) FROM authors"
+        total_authors = await conn.fetchval(total_authors_query)
+
+        # Calculate the total number of pages
+        total_pages = (total_authors + items_per_page - 1) // items_per_page
+
+        # Handle cases where the page number exceeds the maximum page count
+        if page > total_pages:
+            page = total_pages
+
+        return templates.TemplateResponse(
+            "authors.html",
+            {
+                "request": request,
+                "authors": authors,
+                "page": page,
+                "total_authors": total_authors,
+                "items_per_page": items_per_page,
+                "total_pages": total_pages,
+            },
+        )
     except Exception as e:
         error_message = f"An error occurred: {str(e)}"
         return HTMLResponse(content=error_message, status_code=500)
+
 
 '''@app.get("/authors/{id}", response_class=HTMLResponse)
 async def get_author(request: Request, id: int, conn: Connection = Depends(get_db_conn)):
@@ -173,14 +227,39 @@ async def get_author(request: Request, id: int, conn: Connection = Depends(get_d
         return HTMLResponse(content=error_message, status_code=500)'''
 
 @app.get("/categories", response_class=HTMLResponse)
-async def get_categories(request: Request, conn: Connection = Depends(get_db_conn)):
+async def get_categories(
+    request: Request,
+    page: int = Query(1, description="Page number", gt=0),
+    items_per_page: int = Query(10, description="Items per page", le=50),
+    conn: Connection = Depends(get_db_conn)
+):
     try:
-        query = "SELECT id, name FROM categories"
+        # Calculate offset based on page and items_per_page
+        offset = (page - 1) * items_per_page
+
+        # Fetch categories with pagination
+        query = f"SELECT id, name FROM categories LIMIT {items_per_page} OFFSET {offset}"
         result = await conn.fetch(query)
 
-        categories = [CategoryModel(record["id"], record["name"]) for record in result]
+        categories = [CategoryModel(**record) for record in result]
 
-        return templates.TemplateResponse("categories.html", {"request": request, "categories": categories})
+        # Calculate the total number of categories (you might need a separate query)
+        total_categories_query = "SELECT COUNT(*) FROM categories"
+        total_categories = await conn.fetchval(total_categories_query)
+
+        # Calculate total pages
+        total_pages = (total_categories + items_per_page - 1) // items_per_page
+
+        return templates.TemplateResponse(
+            "categories.html",
+            {
+                "request": request,
+                "categories": categories,
+                "page": page,
+                "total_pages": total_pages,  # Pass total_pages to the template
+                "items_per_page": items_per_page,
+            },
+        )
     except Exception as e:
         error_message = f"An error occurred: {str(e)}"
         return HTMLResponse(content=error_message, status_code=500)
