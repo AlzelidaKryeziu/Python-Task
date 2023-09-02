@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Paper {{ paper.id }}</title>
+    <title>Categories</title>
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -21,7 +21,7 @@
             border-collapse: collapse;
         }
 
-        th {
+        thead {
             background-color: lightgray;
         }
 
@@ -33,32 +33,22 @@
     </style>
 </head>
 <body>
-    <h1>Paper Details</h1>
+    <h1>Categories</h1>
     <table>
-        <tr>
-            <th>ID</th>
-            <td>{{ paper.id }}</td>
-        </tr>
-        <tr>
-            <th>Title</th>
-            <td>{{ paper.title }}</td>
-        </tr>
-        <tr>
-            <th>Abstract</th>
-            <td>{{ paper.abstract }}</td>
-        </tr>
-        <tr>
-            <th>Authors</th>
-            <td>{{ paper.authors_parsed }}</td>
-        </tr>
-        <tr>
-            <th>Categories</th>
-            <td>{{ paper.categories }}</td>
-        </tr>
-        <tr>
-            <th>Publication Date</th>
-            <td>{{ paper.update_date }}</td>
-        </tr>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for category in categories %}
+                <tr>
+                    <td>{{ category.id }}</td>
+                    <td>{{ category.name }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
     </table>
 </body>
 </html>

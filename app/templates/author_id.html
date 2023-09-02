@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Author Detail</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h1>Author Detail</h1>
+    <h2>ID: {{ author_detail.id }}</h2>
+    <h2>Name: {{ author_detail.name }}</h2>
+    <h2>Papers:</h2>
+    <ul>
+        {% for paper in author_papers.papers %}
+            <li>
+                <strong>ID:</strong> {{ paper.id }}<br>
+                <strong>Title:</strong> {{ paper.title }}<br>
+                <strong>Abstract:</strong> {{ paper.abstract }}<br>
+                <strong>Update Date:</strong> {{ paper.update_date }}<br>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

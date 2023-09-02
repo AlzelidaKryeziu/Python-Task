@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Category Detail</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h1>Category Detail</h1>
+    
+    <h2>ID: {{ category_info.id }}</h2>
+    <h2>Name: {{ category_info.name }}</h2>
+    
+    <h2>Papers:</h2>
+    <ul>
+        {% for paper in papers %}
+            <li>
+                <strong>ID:</strong> {{ paper.id }}<br>
+                <strong>Title:</strong> {{ paper.title }}<br>
+                <strong>Abstract:</strong> {{ paper.abstract }}<br>
+                <strong>Update Date:</strong> {{ paper.update_date }}<br>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
