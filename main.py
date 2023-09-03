@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, Depends, Path, Query
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 import asyncpg
 from asyncpg import Connection
 from sqlalchemy import func
@@ -63,8 +63,6 @@ class AuthorModel:
     def __init__(self, id, name):
         self.id = id
         self.name = name
-        # Add other attributes here if needed
-
         
 class AuthorDetailModel:
     def __init__(self, id, name, papers):
@@ -76,6 +74,47 @@ class CategoryModel:
     def __init__(self, id, name):
         self.id = id
         self.name = name
+
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request, conn: Connection = Depends(get_db_conn)):
+    total_papers_query = "SELECT COUNT(*) FROM papers"
+    total_authors_query = "SELECT COUNT(DISTINCT id) FROM authors"
+    total_categories_query = "SELECT COUNT(DISTINCT id) FROM categories"
+
+    total_papers = await conn.fetchval(total_papers_query)
+    total_authors = await conn.fetchval(total_authors_query)
+    total_categories = await conn.fetchval(total_categories_query)
+    return templates.TemplateResponse(
+        "home.html",
+        {
+            "request": request,
+            "total_papers": total_papers,
+            "total_authors": total_authors,
+            "total_categories": total_categories,
+        },
+    )
+
+@app.get("/search", response_class=HTMLResponse)
+async def search(
+    request: Request,
+    search_type: str = Query(..., description="Search type (author, paper, category)"),
+    query: str = Query(..., description="Search query"),
+):
+    # Determine the endpoint URL based on the search type
+    endpoint_url = {
+        "author": "/authors/",
+        "paper": "/papers/",
+        "category": "/categories/",
+    }.get(search_type)
+
+    if endpoint_url:
+        # Redirect to the corresponding endpoint with the search query
+        redirect_url = f"{endpoint_url}{query}"
+        return RedirectResponse(url=redirect_url)
+
+    # If the search type is invalid, return an error message
+    error_message = "Invalid search type."
+    return HTMLResponse(content=error_message, status_code=400)
 
 @app.get("/papers", response_class=HTMLResponse)
 async def get_papers(

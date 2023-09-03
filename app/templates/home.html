@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home Page</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .links {
+            display: flex;
+            align-items: center;
+        }
+
+        .link-item {
+            margin: 10px;
+            background-color: #bedeff;
+            border-radius: 15px;
+            padding: 7px;
+        }
+
+        .links a:link {
+            text-decoration: none;
+            color: black;
+        }
+
+        .links a:visited {
+            text-decoration: none;
+            color: black;
+        }
+
+        .links a:hover {
+            text-decoration: none;
+            color: gray;
+        }
+
+        .links a:active {
+            text-decoration: none;
+            color: black;
+        }
+
+        .search-form {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-select {
+            margin-right: 10px;
+            height: 30px;
+        }
+
+        .search-input {
+            height: 30px;
+            border: 1px solid gray;
+            border-radius: 5px;
+        }
+
+        .search-button {
+            background-color: #007BFF;
+            color: white;
+            height: 32px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .stats-table {
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 50%;
+        }
+
+        .stats-table th, .stats-table td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .stats-table th {
+            background-color: #bad6f1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Papers Portal</h1>
+    <div class="links">
+        <a class="link-item" href="/papers">View Papers</a>
+        <a class="link-item" href="/authors">View Authors</a>
+        <a class="link-item" href="/categories">View Categories</a>
+    </div>
+
+    <form class="search-form" method="get" action="/search">
+        <select class="search-select" name="search_type">
+            <option value="author">Author</option>
+            <option value="paper">Paper</option>
+            <option value="category">Category</option>
+        </select>
+        <input class="search-input" type="text" name="query" placeholder="Search by ID">
+        <button class="search-button" type="submit">Search</button>
+    </form>
+
+    <table class="stats-table">
+        <tr>
+            <th>Category</th>
+            <th>Total</th>
+        </tr>
+        <tr>
+            <td>Papers</td>
+            <td>{{ total_papers }}</td>
+        </tr>
+        <tr>
+            <td>Authors</td>
+            <td>{{ total_authors }}</td>
+        </tr>
+        <tr>
+            <td>Categories</td>
+            <td>{{ total_categories }}</td>
+        </tr>
+    </table>
+</body>
+</html>
