@@ -1,27 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Author Detail</title>
+    <title>Author {{ author_info.id }}</title>
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
+            margin-left: 50px;
+            margin-right: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        table {
+            border-collapse: collapse;
+            min-width: 40vw;
+        }
+
+        th {
+            background-color: lightgray;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 3px;
         }
     </style>
 </head>
 <body>
-    <h1>Author Detail</h1>
-    <h2>ID: {{ author_detail.id }}</h2>
-    <h2>Name: {{ author_detail.name }}</h2>
-    <h2>Papers:</h2>
-    <ul>
-        {% for paper in author_papers.papers %}
-            <li>
-                <strong>ID:</strong> {{ paper.id }}<br>
-                <strong>Title:</strong> {{ paper.title }}<br>
-                <strong>Abstract:</strong> {{ paper.abstract }}<br>
-                <strong>Update Date:</strong> {{ paper.update_date }}<br>
-            </li>
+    <h1>Author Details</h1>
+    <table>
+        <tr>
+            <th>ID</th>
+            <td>{{ author_info.id }}</td>
+        </tr>
+        <tr>
+            <th>Name</th>
+            <td>{{ author_info.name }}</td>
+        </tr>
+    </table>
+
+    <h2>List of Papers</h2>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+        </tr>
+        {% for paper in papers %}
+            <tr>
+                <td>{{ paper.id }}</td>
+                <td>{{ paper.title }}</td>
+            </tr>
         {% endfor %}
-    </ul>
+    </table>
 </body>
 </html>

@@ -220,38 +220,35 @@ async def get_authors(
         return HTMLResponse(content=error_message, status_code=500)
 
 
-
-'''@app.get("/authors/{id}", response_class=HTMLResponse)
+@app.get("/authors/{id}", response_class=HTMLResponse)
 async def get_author(request: Request, id: int, conn: Connection = Depends(get_db_conn)):
     try:
-        # Fetch the author's ID and name
-        author_query = "SELECT id, name FROM authors WHERE id = $1"
-        author_record = await conn.fetchrow(author_query, id)
+        author_query = """
+            SELECT authors.id, authors.name,
+                papers.id AS paper_id,
+                papers.title AS paper_title
+            FROM authors
+            JOIN authors_papers ON authors.id = authors_papers.author_id
+            JOIN papers ON authors_papers.paper_id = papers.id
+            WHERE authors.id = $1
+        """
+        result = await conn.fetch(author_query, id)
 
-        if author_record:
-            authors_id, author_name = author_record
-
-            # Fetch all papers related to the author
-            papers_query = """
-                SELECT *
-                FROM papers
-                JOIN authors_papers ON papers.id = authors_papers.paper_id
-                WHERE authors_papers.author_id = $1
-            """
-            papers_result = await conn.fetch(papers_query, id)
-
-            # Create an instance of AuthorModel
-            author_detail = AuthorModel(id=authors_id, name=author_name)
-
-            # Create a list of PaperModel instances
-            author_papers = [PaperModel(**record) for record in papers_result]
-
-            return templates.TemplateResponse("author_id.html", {"request": request, "author_detail": author_detail, "author_papers": author_papers})
-        else:
+        if not result:
             return HTMLResponse(content="Author not found", status_code=404)
+
+        author_info = {
+            "id": result[0]["id"],
+            "name": result[0]["name"]
+        }
+
+        papers = [{"id": row["paper_id"], "title": row["paper_title"]} for row in result]
+
+        return templates.TemplateResponse("author_id.html", {"request": request, "author_info": author_info, "papers": papers})
     except Exception as e:
         error_message = f"An error occurred: {str(e)}"
-        return HTMLResponse(content=error_message, status_code=500)'''
+        return HTMLResponse(content=error_message, status_code=500)
+
 
 @app.get("/categories", response_class=HTMLResponse)
 async def get_categories(
@@ -298,12 +295,13 @@ async def get_categories(
         return HTMLResponse(content=error_message, status_code=500)
 
     
-'''@app.get("/categories/{id}", response_class=HTMLResponse)
+@app.get("/categories/{id}", response_class=HTMLResponse)
 async def get_category(request: Request, id: int, conn: Connection = Depends(get_db_conn)):
     try:
-        # Fetch the category's ID and name along with associated papers
         category_query = """
-            SELECT categories.id, categories.name, papers.*
+            SELECT categories.id, categories.name,
+                papers.id AS paper_id,
+                papers.title AS paper_title
             FROM categories
             JOIN categories_papers ON categories.id = categories_papers.category_id
             JOIN papers ON categories_papers.paper_id = papers.id
@@ -314,14 +312,15 @@ async def get_category(request: Request, id: int, conn: Connection = Depends(get
         if not result:
             return HTMLResponse(content="Category not found", status_code=404)
 
-        # Extract category information (the first row) and paper details (remaining rows)
         category_info = {
             "id": result[0]["id"],
             "name": result[0]["name"]
         }
-        papers = [PaperModel(**record) for record in result]
+
+        papers = [{"id": row["paper_id"], "title": row["paper_title"]} for row in result]
 
         return templates.TemplateResponse("category_id.html", {"request": request, "category_info": category_info, "papers": papers})
     except Exception as e:
         error_message = f"An error occurred: {str(e)}"
-        return HTMLResponse(content=error_message, status_code=500)'''
+        return HTMLResponse(content=error_message, status_code=500)
+

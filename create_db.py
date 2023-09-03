@@ -15,6 +15,7 @@ authors_papers = Table(
     Column('paper_id', String(200), ForeignKey('papers.id'))
 )
 
+
 # association table for categories and papers
 categories_papers = Table(
     'categories_papers',
@@ -52,7 +53,6 @@ class Author(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(200), unique=True)
 
-    # many-to-many relationship with 'papers'
     papers = relationship('Paper', secondary=authors_papers, back_populates='authors')
 
 class Category(Base):
